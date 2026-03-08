@@ -2,7 +2,7 @@ var express = require('express');
 var router = express.Router();
 const MongoClient = require('mongodb').MongoClient;
 
-const client = new MongoClient('mongodb://dbase:27017/');
+const client = new MongoClient('mongodb://localhost:27017/');
 
 router.get('/', async(req, res, next) =>{
   try{
