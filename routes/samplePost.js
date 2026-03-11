@@ -13,7 +13,7 @@ router.post('/', async (req, res, next) =>{
     const database = client.db("meanDB");
     const users = database.collection("users");
     const result = await users.insertOne({username:reqBody.uname, useremail:reqBody.uemail});
-    res.send(result);
+    res.json(result);
   } finally {
     //await client.close();
   }

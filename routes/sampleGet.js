@@ -6,10 +6,13 @@ const client = new MongoClient('mongodb://localhost:27017/');
 
 router.get('/', async(req, res, next) =>{
   try{
+    if (!req.query.userEmail) {
+      return res.json(null);
+    }
     const database = client.db("meanDB");
     const users = database.collection("users");
     const selected = await users.findOne({useremail:req.query.userEmail});
-    res.send(selected);
+    res.json(selected);
   } finally {
     
   }

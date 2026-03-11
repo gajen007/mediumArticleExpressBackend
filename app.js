@@ -5,7 +5,6 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 
 var indexRouter = require('./routes/index');
-var testRouter = require('./routes/test');
 var postRouter = require('./routes/samplePost');
 var getRouter = require('./routes/sampleGet');
 
@@ -24,7 +23,6 @@ var cors = require('cors');
 app.use(cors({origin:'*',methods:['POST','GET']}));
 
 app.use('/', indexRouter);
-app.use('/test', testRouter);
 app.use('/samplePost',postRouter);
 app.use('/sampleGet',getRouter);
 
