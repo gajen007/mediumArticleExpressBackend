@@ -1,23 +1,30 @@
 var express = require('express');
 var router = express.Router();
-const MongoClient = require('mongodb').MongoClient;
+const { MongoClient, ServerApiVersion } = require('mongodb');
 
-const client = new MongoClient('mongodb://localhost:27017/');
+const client = new MongoClient(process.env.MONGODB_URI, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  }
+});
 
-const objID = require('mongodb').ObjectId;
-
-
-router.post('/', async (req, res, next) =>{
+router.post('/', async (req, res, next) => {
   const reqBody = req.body;
-  try{
+  try {
+    await client.connect();
     const database = client.db("meanDB");
     const users = database.collection("users");
-    const result = await users.insertOne({username:reqBody.uname, useremail:reqBody.uemail});
+    const result = await users.insertOne({
+      username: reqBody.uname,
+      useremail: reqBody.uemail
+    });
     res.json(result);
-  } finally {
-    //await client.close();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message, result: false });
   }
 });
 
 module.exports = router;
-

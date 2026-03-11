@@ -1,21 +1,28 @@
+require('dotenv').config();  // ← must be line 1, before everything else
 const request = require("supertest");
-const { MongoClient } = require("mongodb");
+const { MongoClient, ServerApiVersion } = require("mongodb");
 const app = require("./app");
 
 // ─────────────────────────────────────────────
 // MongoDB connection shared across all tests
+// Reads from env var — works locally AND in GitLab CI
 // ─────────────────────────────────────────────
 let mongoClient;
 let db;
 
 beforeAll(async () => {
-  mongoClient = new MongoClient("mongodb://localhost:27017/");
+  mongoClient = new MongoClient(process.env.MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true,
+    }
+  });
   await mongoClient.connect();
   db = mongoClient.db("meanDB");
 });
 
 afterAll(async () => {
-  // Clean up every test document inserted during this run
   await db.collection("users").deleteMany({ useremail: /@test\.com/ });
   await mongoClient.close();
 });
@@ -25,7 +32,6 @@ afterAll(async () => {
 // ═════════════════════════════════════════════
 describe("SEQUENCE 1 — POST /samplePost (sendData)", () => {
 
-  // ── Happy path ───────────────────────────
   test("1.1  Should insert a user and return an acknowledged result", async () => {
     const res = await request(app)
       .post("/samplePost")
@@ -45,7 +51,6 @@ describe("SEQUENCE 1 — POST /samplePost (sendData)", () => {
     expect(user.username).toBe("Alice");
   });
 
-  // ── Edge cases ───────────────────────────
   test("1.3  Should still insert when only email is provided (uname undefined)", async () => {
     const res = await request(app)
       .post("/samplePost")
@@ -79,7 +84,6 @@ describe("SEQUENCE 1 — POST /samplePost (sendData)", () => {
 // ═════════════════════════════════════════════
 describe("SEQUENCE 2 — GET /sampleGet (getUser)", () => {
 
-  // ── Happy path ───────────────────────────
   test("2.1  Should return the user document for a known email", async () => {
     const res = await request(app)
       .get("/sampleGet")
@@ -99,14 +103,13 @@ describe("SEQUENCE 2 — GET /sampleGet (getUser)", () => {
     expect(res.body.username).toBe("Alice");
   });
 
-  // ── Edge cases ───────────────────────────
   test("2.3  Should return null body for an email that does not exist", async () => {
     const res = await request(app)
       .get("/sampleGet")
       .query({ userEmail: "ghost@test.com" });
 
     expect(res.statusCode).toBe(200);
-    expect(res.body).toBeNull(); // findOne returns null when not found
+    expect(res.body).toBeNull();
   });
 
   test("2.4  Should return null body when userEmail query param is missing", async () => {
@@ -126,3 +129,23 @@ describe("SEQUENCE 2 — GET /sampleGet (getUser)", () => {
     expect(res.body).toBeNull();
   });
 });
+
+/*
+```
+
+---
+
+**The key changes summarised:**
+
+| What | Before | After |
+|---|---|---|
+| Connection URL | hardcoded `localhost:27017` | `process.env.MONGODB_URI` |
+| Atlas compatibility | plain `MongoClient` | `ServerApiVersion.v1` added |
+| Error handling | silent `finally` block | `catch` returns HTTP 500 + message |
+| Test connection | same hardcoded localhost | same `MONGODB_URI` env var |
+
+**For local dev**, create a `.env` file (and add it to `.gitignore`):
+```
+MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority
+For GitLab CI, add MONGODB_URI as a CI/CD variable under Settings → CI/CD → Variables — never commit it to your repo.
+*/
